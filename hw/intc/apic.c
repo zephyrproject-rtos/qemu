@@ -759,7 +759,7 @@ int apic_accept_pic_intr(DeviceState *dev)
     APICCommonState *s = APIC(dev);
     uint32_t lvt0;
 
-    if (!s)
+    if (!s || !(s->spurious_vec & APIC_SV_ENABLE))
         return -1;
 
     lvt0 = s->lvt[APIC_LVT_LINT0];
