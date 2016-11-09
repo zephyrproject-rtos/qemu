@@ -1,0 +1,2 @@
+obj-y = boot.o 10m50_devboard.o
+obj-y += altera_10m50_zephyr.o
