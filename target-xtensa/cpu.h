@@ -195,6 +195,7 @@ enum {
 #define MAX_NCCOMPARE 3
 #define MAX_TLB_WAY_SIZE 8
 #define MAX_NDBREAK 2
+#define MAX_NMEMORY 4
 
 #define REGION_PAGE_MASK 0xe0000000
 
@@ -296,6 +297,14 @@ typedef struct XtensaGdbRegmap {
     XtensaGdbReg reg[1 + 16 + 64 + 256 + 256];
 } XtensaGdbRegmap;
 
+typedef struct XtensaMemory {
+    unsigned num;
+    struct XtensaMemoryRegion {
+        uint32_t addr;
+        uint32_t size;
+    } location[MAX_NMEMORY];
+} XtensaMemory;
+
 typedef struct XtensaConfig {
     const char *name;
     uint64_t options;
@@ -322,6 +331,13 @@ typedef struct XtensaConfig {
     unsigned debug_level;
     unsigned nibreak;
     unsigned ndbreak;
+
+    XtensaMemory instrom;
+    XtensaMemory instram;
+    XtensaMemory datarom;
+    XtensaMemory dataram;
+    XtensaMemory sysrom;
+    XtensaMemory sysram;
 
     uint32_t configid[2];
 
