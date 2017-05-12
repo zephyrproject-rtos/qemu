@@ -416,6 +416,7 @@ void xtensa_breakpoint_handler(CPUState *cs);
 int cpu_xtensa_exec(CPUState *cpu);
 void xtensa_finalize_config(XtensaConfig *config);
 void xtensa_register_core(XtensaConfigList *node);
+void xtensa_sim_open_console(CharDriverState *chr);
 void check_interrupts(CPUXtensaState *s);
 void xtensa_irq_init(CPUXtensaState *env);
 void *xtensa_get_extint(CPUXtensaState *env, unsigned extint);
