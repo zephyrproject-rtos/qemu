@@ -8060,12 +8060,16 @@ void HELPER(v7m_msr)(CPUARMState *env, uint32_t reg, uint32_t val)
         }
         break;
     case 17: /* BASEPRI */
-        env->v7m.basepri = val & 0xff;
+        val &= 0xff;
+        env->v7m.basepri = val;
+        armv7m_nvic_basepri_write(env->nvic, val);
         break;
     case 18: /* BASEPRI_MAX */
         val &= 0xff;
-        if (val != 0 && (val < env->v7m.basepri || env->v7m.basepri == 0))
+        if (val != 0 && (val < env->v7m.basepri || env->v7m.basepri == 0)) {
             env->v7m.basepri = val;
+            armv7m_nvic_basepri_write(env->nvic, val);
+        }
         break;
     case 19: /* FAULTMASK */
         if (val & 1) {

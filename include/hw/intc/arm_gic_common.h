@@ -100,6 +100,16 @@ typedef struct GICState {
 
     uint32_t num_cpu;
 
+    /* BASEPRI register:
+     * The processor does not process any exception with a priority value
+     * greater than or equal to BASEPRI.
+     *
+     * 0x00 = no effect
+     * Nonzero = defines the base priority for exception processing.
+     */
+
+    uint32_t basepri;
+
     MemoryRegion iomem; /* Distributor */
     /* This is just so we can have an opaque pointer which identifies
      * both this GIC and which CPU interface we should be accessing.

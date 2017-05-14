@@ -1071,6 +1071,7 @@ uint32_t arm_phys_excp_target_el(CPUState *cs, uint32_t excp_idx,
 void armv7m_nvic_set_pending(void *opaque, int irq);
 int armv7m_nvic_acknowledge_irq(void *opaque);
 void armv7m_nvic_complete_irq(void *opaque, int irq);
+void armv7m_nvic_basepri_write(void *opaque, uint32_t val);
 
 /* Interface for defining coprocessor registers.
  * Registers are defined in tables of arm_cp_reginfo structs

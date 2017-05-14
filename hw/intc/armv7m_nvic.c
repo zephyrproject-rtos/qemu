@@ -151,6 +151,19 @@ void armv7m_nvic_complete_irq(void *opaque, int irq)
     gic_complete_irq(&s->gic, 0, irq, MEMTXATTRS_UNSPECIFIED);
 }
 
+
+/* Re-evaluate interrupts if BASEPRI register has changed */
+void armv7m_nvic_basepri_write(void *opaque, uint32_t val)
+{
+    nvic_state *nv = (nvic_state *)opaque;
+    GICState *s = &nv->gic;
+
+    if (val != s->basepri) {
+        s->basepri = val;
+        gic_update(s);
+    }
+}
+
 static uint32_t nvic_readl(nvic_state *s, uint32_t offset)
 {
     ARMCPU *cpu;
@@ -484,6 +497,7 @@ static void armv7m_nvic_reset(DeviceState *dev)
     s->gic.priority_mask[0] = 0x100;
     /* The NVIC as a whole is always enabled. */
     s->gic.ctlr = 1;
+    s->gic.basepri = 0;
     systick_reset(s);
 }
 

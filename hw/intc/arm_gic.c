@@ -95,7 +95,8 @@ void gic_update(GICState *s)
 
         irq_level = fiq_level = 0;
 
-        if (best_prio < s->priority_mask[cpu]) {
+        if (best_prio < s->priority_mask[cpu] &&
+                            (s->basepri == 0 || best_prio < s->basepri)) {
             s->current_pending[cpu] = best_irq;
             if (best_prio < s->running_priority[cpu]) {
                 int group = GIC_TEST_GROUP(best_irq, cm);
