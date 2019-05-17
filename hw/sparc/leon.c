@@ -616,7 +616,7 @@ static uint64_t leon_io_read(void *opaque, hwaddr addr,
         ret = s->uart2.status;
         break;
 
-    case TIMER_1_RELOAD_REGISTER ... PRESCALER_RELOAD_REGISTER:
+    case TIMER_1_COUNTER_REGISTER ... PRESCALER_RELOAD_REGISTER:
         ret = leon_timer_io_read(s, addr);
         break;
 
@@ -713,7 +713,7 @@ static void leon_io_write(void *opaque, hwaddr addr,
     }
     break;
 
-    case TIMER_1_RELOAD_REGISTER ... PRESCALER_RELOAD_REGISTER:
+    case TIMER_1_COUNTER_REGISTER ... PRESCALER_RELOAD_REGISTER:
         leon_timer_io_write(s, addr, value);
         break;
 
