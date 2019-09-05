@@ -22,12 +22,16 @@
  * THE SOFTWARE.
  */
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qapi/error.h"
 #include "cpu.h"
 #include "hw/hw.h"
+#include "hw/irq.h"
 #include "qemu/timer.h"
 #include "chardev/char.h"
+#include "chardev/char-fe.h"
 #include "sysemu/sysemu.h"
+#include "sysemu/reset.h"
 #include "hw/boards.h"
 #include "hw/loader.h"
 #include "elf.h"
@@ -35,8 +39,6 @@
 #include "hw/ptimer.h"
 #include "exec/memory.h"
 #include "exec/address-spaces.h"
-#include "hw/adacore/gnat-bus.h"
-#include "hw/adacore/hostfs.h"
 
 /* Default system clock.  */
 #define CPU_CLK (50 * 1000 * 1000)
@@ -220,7 +222,7 @@ static void leon_check_irqs(struct LeonIntState *s)
     uint32_t       level0 = 0;
     uint32_t       level1 = 0;
     CPUSPARCState *env    = s->env;
-    CPUState      *cs     = CPU(sparc_env_get_cpu(env));
+    CPUState      *cs     = env_cpu(env);
 
     pend = (s->pending | s->force) & (s->lvl_mask & 0xfffe);
 
@@ -260,9 +262,9 @@ static void leon_check_irqs(struct LeonIntState *s)
     }
 }
 
-static void leon2_intctl_ack(CPUSPARCState *env, int intno)
+static void leon2_intctl_ack(CPUSPARCState *env, void *irq_manager, int intno)
 {
-    struct LeonIntState *intctl = env->irq_manager;
+    struct LeonIntState *intctl = (struct LeonIntState *)irq_manager;
     uint32_t mask;
     uint32_t state = 0;
 
@@ -838,13 +840,6 @@ static void at697_hw_init(MachineState *machine)
     if (serial_hd(1)) {
         leon_uart_init(serial_hd(1), &s->uart2, cpu_irqs[2]);
     }
-
-    /* HostFS */
-    hostfs_create(0x80001000, get_system_memory());
-
-    /* Initialize the GnatBus Master */
-    gnatbus_master_init(cpu_irqs, MAX_PILS);
-    gnatbus_device_init();
 
     /* Can directly load an application. */
     if (kernel_filename != NULL) {
