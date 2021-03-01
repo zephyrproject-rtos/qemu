@@ -1558,7 +1558,7 @@ def main():
     toppat = ExcMultiPattern(0)
 
     for filename in args:
-        input_file = filename
+        input_file = os.path.relpath(filename)
         f = open(filename, 'rt', encoding='utf-8')
         parse_file(f, toppat)
         f.close()
