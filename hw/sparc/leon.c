@@ -23,6 +23,7 @@
  */
 #include "qemu/osdep.h"
 #include "qemu-common.h"
+#include "qemu/datadir.h"
 #include "qapi/error.h"
 #include "cpu.h"
 #include "hw/hw.h"
@@ -757,6 +758,7 @@ static const MemoryRegionOps leon_io_ops = {
 static void at697_hw_init(MachineState *machine)
 {
     ram_addr_t ram_size = machine->ram_size;
+    const char *bios_name = machine->firmware ?: PROM_FILENAME;
     const char *kernel_filename = machine->kernel_filename;
     SPARCCPU      *cpu;
     CPUSPARCState *env;
@@ -815,9 +817,6 @@ static void at697_hw_init(MachineState *machine)
     memory_region_add_subregion(address_space_mem, 0x20000000, ram2);
 
     /* load boot prom */
-    if (bios_name == NULL) {
-        bios_name = PROM_FILENAME;
-    }
     filename = qemu_find_file(QEMU_FILE_TYPE_BIOS, bios_name);
     bios_size = get_image_size(filename);
     if (bios_size > 0) {
