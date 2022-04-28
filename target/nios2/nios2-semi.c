@@ -29,7 +29,7 @@
 #include "qemu.h"
 #else
 #include "qemu-common.h"
-#include "exec/softmmu-semi.h"
+#include "semihosting/softmmu-uaccess.h"
 #endif
 #include "qemu/log.h"
 
