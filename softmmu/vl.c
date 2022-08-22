@@ -1911,7 +1911,7 @@ static void qemu_apply_machine_options(QDict *qdict)
     current_machine->boot_order = boot_order;
     current_machine->boot_once = boot_once;
 
-    if (semihosting_enabled() && !semihosting_get_argc()) {
+    if (semihosting_enabled(false) && !semihosting_get_argc()) {
         /* fall back to the -kernel/-append */
         semihosting_arg_fallback(current_machine->kernel_filename, current_machine->kernel_cmdline);
     }
