@@ -1,6 +1,6 @@
 #include "qemu/osdep.h"
 #include "cpu.h"
-#include "gdbstub/helpers.h"
+#include "exec/gdbstub.h"
 #include "qemu/host-utils.h"
 
 #include "core-sample_controller32/core-isa.h"
