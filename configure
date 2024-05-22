@@ -967,10 +967,7 @@ get_pwd() {
     fi
 }
 
-meson="$(cd pyvenv/bin; get_pwd)/meson"
-if [ -f "$meson$EXESUF" ]; then
-  meson="$meson$EXESUF"
-fi
+meson=`which meson`
 
 # On Haiku, meson might show up in a "non-packaged" subfolder instead, see
 # https://github.com/haiku/haiku/blob/r1beta5/docs/user/storage/storageintro.dox
