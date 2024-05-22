@@ -988,14 +988,14 @@ python="$(command -v "$python")"
 echo "python determined to be '$python'"
 echo "python version: $($python --version)"
 
-python="$($python -B "${source_path}/python/scripts/mkvenv.py" create pyvenv)"
+python=python3
 if test "$?" -ne 0 ; then
     error_exit "python venv creation failed"
 fi
 
 # Suppress writing compiled files
 python="$python -B"
-mkvenv="$python ${source_path}/python/scripts/mkvenv.py"
+mkvenv=true
 
 # Finish preparing the virtual environment using vendored .whl files
 
