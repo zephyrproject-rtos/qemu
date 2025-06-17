@@ -48,7 +48,6 @@ void rx_cpu_do_interrupt(CPUState *cs)
     uint32_t save_psw;
 
     env->in_sleep = 0;
-
     if (env->psw_u) {
         env->usp = env->regs[0];
     } else {
@@ -56,8 +55,9 @@ void rx_cpu_do_interrupt(CPUState *cs)
     }
     save_psw = rx_cpu_pack_psw(env);
     env->psw_pm = env->psw_i = env->psw_u = 0;
+    int32_t vec = cs->exception_index;
 
-    if (do_irq) {
+    if (do_irq && vec < 0) {
         if (do_irq & CPU_INTERRUPT_FIR) {
             env->bpc = env->pc;
             env->bpsw = save_psw;
@@ -79,7 +79,6 @@ void rx_cpu_do_interrupt(CPUState *cs)
                           "interrupt 0x%02x raised\n", env->ack_irq);
         }
     } else {
-        uint32_t vec = cs->exception_index;
         const char *expname = "unknown exception";
 
         env->isp -= 4;
