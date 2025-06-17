@@ -29,6 +29,7 @@ struct RCMTState {
     /*< public >*/
 
     uint64_t input_freq;
+    uint64_t cmt_freq[CMT_CH];
     MemoryRegion memory;
 
     uint16_t cmstr;
