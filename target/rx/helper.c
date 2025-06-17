@@ -48,7 +48,6 @@ void rx_cpu_do_interrupt(CPUState *cs)
     uint64_t last_pc = env->pc;
 
     env->in_sleep = 0;
-
     if (env->psw_u) {
         env->usp = env->regs[0];
     } else {
@@ -56,8 +55,9 @@ void rx_cpu_do_interrupt(CPUState *cs)
     }
     save_psw = rx_cpu_pack_psw(env);
     env->psw_pm = env->psw_i = env->psw_u = 0;
+    int32_t vec = cs->exception_index;
 
-    if (cpu_test_interrupt(cs, CPU_INTERRUPT_FIR)) {
+    if (vec < 0 && cpu_test_interrupt(cs, CPU_INTERRUPT_FIR)) {
         env->bpc = env->pc;
         env->bpsw = save_psw;
         env->pc = env->fintv;
@@ -66,7 +66,7 @@ void rx_cpu_do_interrupt(CPUState *cs)
         qemu_set_irq(env->ack, env->ack_irq);
         qemu_plugin_vcpu_interrupt_cb(cs, last_pc);
         qemu_log_mask(CPU_LOG_INT, "fast interrupt raised\n");
-    } else if (cpu_test_interrupt(cs, CPU_INTERRUPT_HARD)) {
+    } else if (vec < 0 && cpu_test_interrupt(cs, CPU_INTERRUPT_HARD)) {
         env->isp -= 4;
         cpu_stl_le_data(env, env->isp, save_psw);
         env->isp -= 4;
@@ -78,7 +78,6 @@ void rx_cpu_do_interrupt(CPUState *cs)
         qemu_plugin_vcpu_interrupt_cb(cs, last_pc);
         qemu_log_mask(CPU_LOG_INT, "interrupt 0x%02x raised\n", env->ack_irq);
     } else {
-        uint32_t vec = cs->exception_index;
         const char *expname = "unknown exception";
 
         env->isp -= 4;
