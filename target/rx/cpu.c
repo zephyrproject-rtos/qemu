@@ -27,6 +27,7 @@
 #include "hw/loader.h"
 #include "fpu/softfloat.h"
 #include "tcg/debug-assert.h"
+#include "system/reset.h"
 
 static void rx_cpu_set_pc(CPUState *cs, vaddr value)
 {
@@ -129,6 +130,13 @@ static ObjectClass *rx_cpu_class_by_name(const char *cpu_model)
     return oc;
 }
 
+static void rx_cpu_reset(void *opaque)
+{
+    RXCPU *cpu = opaque;
+
+    cpu_reset(CPU(cpu));
+}
+
 static void rx_cpu_realize(DeviceState *dev, Error **errp)
 {
     CPUState *cs = CPU(dev);
@@ -142,7 +150,7 @@ static void rx_cpu_realize(DeviceState *dev, Error **errp)
     }
 
     qemu_init_vcpu(cs);
-    cpu_reset(cs);
+    qemu_register_reset(rx_cpu_reset, RX_CPU(cs));
 
     rcc->parent_realize(dev, errp);
 }
