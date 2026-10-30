@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (c) 2026 Linumiz
+#
+# RH850 16-bit instructions.
+# "reserved" patterns are encodings the manual says not to use; they raise
+# RIE, as does any encoding without a pattern.
+
+&rr16       r1 r2
+&ri16       imm r2
+&r1_16      r1
+&sld        r2 disp
+
+%disp9      11:s5 4:3                   !function=ex_shift_1
+%sdisp_h    0:7                         !function=ex_shift_1
+%sdisp_w    1:6                         !function=ex_shift_2
+%sdisp_hu   0:4                         !function=ex_shift_1
+
+@rr16       r2:5 ...... r1:5            &rr16
+@ri16       r2:5 ...... imm:s5          &ri16
+@ru16       r2:5 ...... imm:5           &ri16
+@r1_16      ..... ...... r1:5           &r1_16
+
+# Opcode 000000, reg2 = r0 holds NOP and SYNCx
+{
+  NOP       0000000000000000
+  SYNCI     0000000000011100
+  SYNCE     0000000000011101
+  SYNCM     0000000000011110
+  SYNCP     0000000000011111
+  # MOV reg1, reg2 with reg2 = r0
+  reserved16 00000 000000 -----
+  MOV_rr    ..... 000000 .....          @rr16
+}
+NOT         ..... 000001 .....          @rr16
+# Opcode 000010
+{
+  # RIE (also FETRAP with vector4 = 0)
+  RIE1      0000000001000000
+  # SWITCH (reg1 = r0 is RIE)
+  SWITCH    00000 000010 r1:5
+  FETRAP    0 vector:4 000010 00000
+  # DIVH reg1, reg2 with reg1 = r0
+  reserved16 1 ---- 000010 00000
+  DIVH_rr   ..... 000010 .....          @rr16
+}
+# Opcode 000011
+{
+  JMP_r     00000 000011 r1:5
+  # SLD.BU, SLD.HU (reg2 = r0 is JMP)
+  SLD_BU    r2:5 0000110 disp:4         &sld
+  SLD_HU    r2:5 0000111 ....           &sld disp=%sdisp_hu
+}
+# Opcodes 000100-000111: reg2 = r0 selects ZXB/SXB/ZXH/SXH
+{
+  ZXB       00000 000100 .....          @r1_16
+  SATSUBR   ..... 000100 .....          @rr16
+}
+{
+  SXB       00000 000101 .....          @r1_16
+  SATSUB_rr ..... 000101 .....          @rr16
+}
+{
+  ZXH       00000 000110 .....          @r1_16
+  SATADD_rr ..... 000110 .....          @rr16
+}
+{
+  SXH       00000 000111 .....          @r1_16
+  MULH_rr   ..... 000111 .....          @rr16
+}
+OR          ..... 001000 .....          @rr16
+XOR         ..... 001001 .....          @rr16
+AND         ..... 001010 .....          @rr16
+TST         ..... 001011 .....          @rr16
+SUBR        ..... 001100 .....          @rr16
+SUB         ..... 001101 .....          @rr16
+ADD_rr      ..... 001110 .....          @rr16
+CMP_rr      ..... 001111 .....          @rr16
+# Opcodes 010000-010001: reg2 = r0 is CALLT
+{
+  CALLT     0000001000 imm:6
+  MOV_i5    ..... 010000 .....          @ri16
+  SATADD_i5 ..... 010001 .....          @ri16
+}
+# imm5 is sign-extended for ADD and CMP, zero-extended for shifts;
+# MULH with reg2 = r0 is a 48-bit instruction
+ADD_i5      ..... 010010 .....          @ri16
+CMP_i5      ..... 010011 .....          @ri16
+SHR_i5      ..... 010100 .....          @ru16
+SAR_i5      ..... 010101 .....          @ru16
+SHL_i5      ..... 010110 .....          @ru16
+MULH_i5     ..... 010111 .....          @ri16
+SLD_B       r2:5 0110 disp:7            &sld
+SST_B       r2:5 0111 disp:7            &sld
+SLD_H       r2:5 1000 .......           &sld disp=%sdisp_h
+SST_H       r2:5 1001 .......           &sld disp=%sdisp_h
+SLD_W       r2:5 1010 ...... 0          &sld disp=%sdisp_w
+SST_W       r2:5 1010 ...... 1          &sld disp=%sdisp_w
+Bcond9      ..... 1011 ... cond:4       disp=%disp9

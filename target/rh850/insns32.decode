@@ -1,0 +1,353 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (c) 2026 Linumiz
+#
+# RH850 32-bit instructions, insn = halfword0 | halfword1 << 16.
+# 48/64-bit forms fetch the extra halfwords through !function fields.
+# "reserved" patterns are encodings the manual says not to use; they raise
+# RIE, as does any encoding without a pattern.
+
+&rrr        r1 r2 r3
+&rrrc       r1 r2 r3 cond
+&rri        r1 r2 imm
+&rr         r1 r2
+&r23        r2 r3
+&mem        r1 r2 disp
+&mem23      r1 r3 disp
+&memi       r1 r3
+&bit        r1 bit disp
+&bins       r1 r2 msb lsb
+&mac        r1 r2 r3 r4
+&cond_r2    r2 cond
+
+%disp16     17:s15                      !function=ex_shift_1
+%disp16_bu  17:s15 5:1
+%disp17     4:s1 17:15                  !function=ex_shift_1
+%disp22     0:s6 17:15                  !function=ex_shift_1
+%disp23_b   20:7                        !function=ex_disp23
+%disp23_h   21:6                        !function=ex_disp23_h
+%disp32     17:15                       !function=ex_disp32
+%loop_disp  17:15                       !function=ex_shift_1
+%imm32      16:16                       !function=append_hi16
+%imm9s      18:s4 0:5
+%imm9u      18:4 0:5
+%list12     21:11 0:1                   !function=ex_list12
+%prep_ep    ff:2                        !function=ex_prepare_ep
+%vector8    27:3 0:5
+%cacheop    11:2 27:5
+%msb_hi     28:4                        !function=ex_plus_16
+%lsb_hi     27:1 17:3                   !function=ex_plus_16
+%lsb_lo     27:1 17:3
+%mac_r3     28:4                        !function=ex_shift_1
+%mac_r4     17:4                        !function=ex_shift_1
+
+@rrr        r3:5 ........... r2:5 ...... r1:5           &rrr
+@rrrc       r3:5 ...... cond:4 . r2:5 ...... r1:5       &rrrc
+@rri16      imm:16 r2:5 ...... r1:5                     &rri
+@rris16     imm:s16 r2:5 ...... r1:5                    &rri
+@rr         ................ r2:5 ...... r1:5          &rr
+@r23        r3:5 ........... r2:5 ...... .....          &r23
+@mem16      ................ r2:5 ...... r1:5           &mem disp=%disp16
+@mem16b     disp:s16 r2:5 ...... r1:5                   &mem
+@mem23b     r3:5 ................ ...... r1:5           &mem23 disp=%disp23_b
+@mem23h     r3:5 ................ ...... r1:5           &mem23 disp=%disp23_h
+@memi       r3:5 ................ ...... r1:5           &memi
+@bit        disp:s16 .. bit:3 ...... r1:5               &bit
+
+ADDI        ................ ..... 110000 .....         @rris16
+{
+  # MOV imm32, reg1 (48-bit)
+  MOV_i32   ................ 00000 110001 r1:5         imm=%imm32
+  MOVEA     imm:s16 r2:5 110001 r1:5
+}
+# Opcodes 110010/110011: reg2 = r0 is DISPOSE
+{
+  DISPOSE   ........... 00000 00000 11001 imm:5 .     list=%list12
+  # DISPOSE imm5, list12, [reg1] (reg1 = r0 is form 1)
+  DISPOSE_r ........... r1:5 00000 11001 imm:5 .      list=%list12
+  MOVHI     imm:16 r2:5 110010 r1:5
+  SATSUBI   ................ ..... 110011 .....       @rris16
+}
+# ORI, XORI, ANDI (imm16 zero-extended)
+ORI         ................ ..... 110100 .....         @rri16
+XORI        ................ ..... 110101 .....         @rri16
+ANDI        ................ ..... 110110 .....         @rri16
+# Opcode 110111: reg2 = r0 is JMP disp32 or LOOP
+{
+  # JMP disp32[reg1] (48-bit)
+  JMP32     ...............0 00000 110111 r1:5         disp=%disp32
+  # LOOP with reg1 = r0
+  reserved32 ---------------1 00000 110111 00000
+  LOOP      ...............1 00000 110111 r1:5         disp=%loop_disp
+  MULHI     ................ ..... 110111 .....       @rri16
+}
+# 16-bit opcode 010111 with reg2 = r0: 48-bit JR/JARL disp32
+{
+  JR32      ...............0 00000 010111 00000       disp=%disp32
+  # JARL disp32, reg1 (reg1 = r0 is JR)
+  JARL32    ...............0 00000 010111 r1:5        disp=%disp32
+}
+LD_B16      ................ ..... 111000 .....         @mem16b
+LD_H16      ...............0 ..... 111001 .....         @mem16
+LD_W        ...............1 r2:5 111001 r1:5          disp=%disp16
+ST_B16      ................ ..... 111010 .....         @mem16b
+ST_H16      ...............0 ..... 111011 .....         @mem16
+ST_W        ...............1 r2:5 111011 r1:5          disp=%disp16
+# Opcodes 111100/111101
+{
+  JR22      ...............0 00000 11110 ......       disp=%disp22
+  PREPARE   ........... 00001 00000 11110 imm:5 .     list=%list12
+  # PREPARE list12, imm5, sp/imm (32/48/64-bit by ff)
+  PREPARE2  ........... ff:2 011 00000 11110 imm:5 .  list=%list12 ep=%prep_ep
+  # disp23 forms (48-bit)
+  LD_B23    ..... ....... 0101 00000 111100 .....     @mem23b
+  LD_H23    ..... ...... 00111 00000 111100 .....     @mem23h
+  LD_W23    ..... ...... 01001 00000 111100 .....     @mem23h
+  ST_B23    ..... ....... 1101 00000 111100 .....     @mem23b
+  ST_W23    ..... ...... 01111 00000 111100 .....     @mem23h
+  LD_BU23   ..... ....... 0101 00000 111101 .....     @mem23b
+  LD_HU23   ..... ...... 00111 00000 111101 .....     @mem23h
+  LD_DW     ..... ...... 01001 00000 111101 .....     @mem23h
+  ST_H23    ..... ...... 01101 00000 111101 .....     @mem23h
+  ST_DW     ..... ...... 01111 00000 111101 .....     @mem23h
+  # Coprocessor format 2 (48-bit): UCPOP, not RIE
+  copro     ----- ------ 11101 00000 111101 -----
+  # LD.BU disp16 with reg2 = r0
+  reserved32 ---------------1 00000 11110 ------
+  # JARL disp22, reg2 (reg2 = r0 is JR)
+  JARL22    ...............0 r2:5 11110 ......        disp=%disp22
+  LD_BU16   ...............1 r2:5 11110 . r1:5       disp=%disp16_bu
+}
+# Bit manipulation, format VIII
+SET1        ................ 00 ... 111110 .....       @bit
+NOT1        ................ 01 ... 111110 .....       @bit
+CLR1        ................ 10 ... 111110 .....       @bit
+TST1        ................ 11 ... 111110 .....       @bit
+# Opcode 111111, halfword1 bit 0 = 1
+{
+  # Bcond disp17 with cond = BR
+  reserved32 ---------------1 00000 111111 - 0101
+  Bcond17   ...............1 00000 111111 . cond:4    disp=%disp17
+  # LD.HU disp16[reg1], reg2 (reg2 = r0 is Bcond)
+  LD_HU16   ...............1 r2:5 111111 r1:5         disp=%disp16
+}
+# Opcode 111111, halfword1 bit 0 = 0
+SETF        0000000000000000 r2:5 1111110 cond:4
+SASF        0000001000000000 r2:5 1111110 cond:4
+RIE2        0000000000000000 imm5:5 1111111 imm4:4
+# Format X with fixed fields
+CTRET       0000000101000100 0000011111100000
+DI          0000000101100000 0000011111100000
+EI          0000000101100000 1000011111100000
+EIRET       0000000101001000 0000011111100000
+FERET       0000000101001010 0000011111100000
+HALT        0000000100100000 0000011111100000
+SNOOZE      0000000100100000 0000111111100000
+RESBANK     1000000101100000 0000011111100000
+TRAP        0000000100000000 00000111111 vector:5
+SYSCALL     00 ... 00101100000 11010111111 .....       vector=%vector8
+PUSHSP      rt:5 00101100000 01000111111 rh:5
+POPSP       rt:5 00101100000 01100111111 rh:5
+{
+  # JARL [reg1], reg3 with reg3 = r0
+  reserved32 00000 00101100000 11000111111 -----
+  JARL_r    r3:5 00101100000 11000111111 r1:5
+}
+PREF        prefop:5 00101100000 11011111111 r1:5
+{
+  # cacheop 1111110 is CLL
+  CLL       11110 00101100000 11111111111 -----
+  CACHE     ..... 00101100000 111 .. 111111 r1:5     op=%cacheop
+}
+# FPU begin
+# Format F:I = coprocessor format 1
+# Double-precision register fields hold an even register; an odd value
+# is another encoding
+&fp2        r2 r3
+&fp3        r1 r2 r3
+&fpcmov     fcbit r1 r2 r3
+&fpcmp      fcond fcbit r1 r2
+&fptrfsr    fcbit
+%dr1        1:4         !function=ex_shift_1
+%dr2        12:4        !function=ex_shift_1
+%dr3        28:4        !function=ex_shift_1
+%fcbit      17:3
+%fcond      27:4
+%fr1        0:5
+%fr2        11:5
+%fr3        27:5
+{
+  TRFSR      00000100 0000...0 00000111 11100000  &fptrfsr fcbit=%fcbit
+  ABSF_D     ....0100 01011000 ....0111 11100000  &fp2 r2=%dr2 r3=%dr3
+  ABSF_S     .....100 01001000 .....111 11100000  &fp2 r2=%fr2 r3=%fr3
+  ADDF_D     ....0100 01110000 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  ADDF_S     .....100 01100000 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  CEILF_DL   ....0100 01010100 ....0111 11100010  &fp2 r2=%dr2 r3=%dr3
+  CEILF_DUL  ....0100 01010100 ....0111 11110010  &fp2 r2=%dr2 r3=%dr3
+  CEILF_DUW  .....100 01010000 ....0111 11110010  &fp2 r2=%dr2 r3=%fr3
+  CEILF_DW   .....100 01010000 ....0111 11100010  &fp2 r2=%dr2 r3=%fr3
+  CEILF_SL   ....0100 01000100 .....111 11100010  &fp2 r2=%fr2 r3=%dr3
+  CEILF_SUL  ....0100 01000100 .....111 11110010  &fp2 r2=%fr2 r3=%dr3
+  CEILF_SUW  .....100 01000000 .....111 11110010  &fp2 r2=%fr2 r3=%fr3
+  CEILF_SW   .....100 01000000 .....111 11100010  &fp2 r2=%fr2 r3=%fr3
+  # CMOVF.D with reg3 = r0 is reserved
+  reservedfpu 00000 1000001 ---0 ----0 111111 ----0
+  CMOVF_D    ....0100 0001...0 ....0111 111....0  &fpcmov fcbit=%fcbit r1=%dr1 r2=%dr2 r3=%dr3
+  # CMOVF.S with reg3 = r0 is reserved
+  reservedfpu 00000 1000000 ---0 ----- 111111 -----
+  CMOVF_S    .....100 0000...0 .....111 111.....  &fpcmov fcbit=%fcbit r1=%fr1 r2=%fr2 r3=%fr3
+  CMPF_D     0....100 0011...0 ....0111 111....0  &fpcmp fcond=%fcond fcbit=%fcbit r1=%dr1 r2=%dr2
+  CMPF_S     0....100 0010...0 .....111 111.....  &fpcmp fcond=%fcond fcbit=%fcbit r1=%fr1 r2=%fr2
+  CVTF_DL    ....0100 01010100 ....0111 11100100  &fp2 r2=%dr2 r3=%dr3
+  CVTF_DS    .....100 01010010 ....0111 11100011  &fp2 r2=%dr2 r3=%fr3
+  CVTF_DUL   ....0100 01010100 ....0111 11110100  &fp2 r2=%dr2 r3=%dr3
+  CVTF_DUW   .....100 01010000 ....0111 11110100  &fp2 r2=%dr2 r3=%fr3
+  CVTF_DW    .....100 01010000 ....0111 11100100  &fp2 r2=%dr2 r3=%fr3
+  CVTF_HS    .....100 01000010 .....111 11100010  &fp2 r2=%fr2 r3=%fr3
+  CVTF_LD    ....0100 01010010 ....0111 11100001  &fp2 r2=%dr2 r3=%dr3
+  CVTF_LS    .....100 01000010 ....0111 11100001  &fp2 r2=%dr2 r3=%fr3
+  CVTF_SD    ....0100 01010010 .....111 11100010  &fp2 r2=%fr2 r3=%dr3
+  CVTF_SL    ....0100 01000100 .....111 11100100  &fp2 r2=%fr2 r3=%dr3
+  CVTF_SH    .....100 01000010 .....111 11100011  &fp2 r2=%fr2 r3=%fr3
+  CVTF_SUL   ....0100 01000100 .....111 11110100  &fp2 r2=%fr2 r3=%dr3
+  CVTF_SUW   .....100 01000000 .....111 11110100  &fp2 r2=%fr2 r3=%fr3
+  CVTF_SW    .....100 01000000 .....111 11100100  &fp2 r2=%fr2 r3=%fr3
+  CVTF_ULD   ....0100 01010010 ....0111 11110001  &fp2 r2=%dr2 r3=%dr3
+  CVTF_ULS   .....100 01000010 ....0111 11110001  &fp2 r2=%dr2 r3=%fr3
+  CVTF_UWD   ....0100 01010010 .....111 11110000  &fp2 r2=%fr2 r3=%dr3
+  CVTF_UWS   .....100 01000010 .....111 11110000  &fp2 r2=%fr2 r3=%fr3
+  CVTF_WD    ....0100 01010010 .....111 11100000  &fp2 r2=%fr2 r3=%dr3
+  CVTF_WS    .....100 01000010 .....111 11100000  &fp2 r2=%fr2 r3=%fr3
+  DIVF_D     ....0100 01111110 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  DIVF_S     .....100 01101110 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  FLOORF_DL  ....0100 01010100 ....0111 11100011  &fp2 r2=%dr2 r3=%dr3
+  FLOORF_DUL ....0100 01010100 ....0111 11110011  &fp2 r2=%dr2 r3=%dr3
+  FLOORF_DUW .....100 01010000 ....0111 11110011  &fp2 r2=%dr2 r3=%fr3
+  FLOORF_DW  .....100 01010000 ....0111 11100011  &fp2 r2=%dr2 r3=%fr3
+  FLOORF_SL  ....0100 01000100 .....111 11100011  &fp2 r2=%fr2 r3=%dr3
+  FLOORF_SUL ....0100 01000100 .....111 11110011  &fp2 r2=%fr2 r3=%dr3
+  FLOORF_SUW .....100 01000000 .....111 11110011  &fp2 r2=%fr2 r3=%fr3
+  FLOORF_SW  .....100 01000000 .....111 11100011  &fp2 r2=%fr2 r3=%fr3
+  FMAF_S     .....100 11100000 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  FMSF_S     .....100 11100010 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  FNMAF_S    .....100 11100100 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  FNMSF_S    .....100 11100110 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  MAXF_D     ....0100 01111000 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  MAXF_S     .....100 01101000 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  MINF_D     ....0100 01111010 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  MINF_S     .....100 01101010 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  MULF_D     ....0100 01110100 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  MULF_S     .....100 01100100 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  NEGF_D     ....0100 01011000 ....0111 11100001  &fp2 r2=%dr2 r3=%dr3
+  NEGF_S     .....100 01001000 .....111 11100001  &fp2 r2=%fr2 r3=%fr3
+  RECIPF_D   ....0100 01011110 ....0111 11100001  &fp2 r2=%dr2 r3=%dr3
+  RECIPF_S   .....100 01001110 .....111 11100001  &fp2 r2=%fr2 r3=%fr3
+  ROUNDF_DL  ....0100 01010100 ....0111 11100000  &fp2 r2=%dr2 r3=%dr3
+  ROUNDF_DUL ....0100 01010100 ....0111 11110000  &fp2 r2=%dr2 r3=%dr3
+  ROUNDF_DUW .....100 01010000 ....0111 11110000  &fp2 r2=%dr2 r3=%fr3
+  ROUNDF_DW  .....100 01010000 ....0111 11100000  &fp2 r2=%dr2 r3=%fr3
+  ROUNDF_SL  ....0100 01000100 .....111 11100000  &fp2 r2=%fr2 r3=%dr3
+  ROUNDF_SUL ....0100 01000100 .....111 11110000  &fp2 r2=%fr2 r3=%dr3
+  ROUNDF_SUW .....100 01000000 .....111 11110000  &fp2 r2=%fr2 r3=%fr3
+  ROUNDF_SW  .....100 01000000 .....111 11100000  &fp2 r2=%fr2 r3=%fr3
+  RSQRTF_D   ....0100 01011110 ....0111 11100010  &fp2 r2=%dr2 r3=%dr3
+  RSQRTF_S   .....100 01001110 .....111 11100010  &fp2 r2=%fr2 r3=%fr3
+  SQRTF_D    ....0100 01011110 ....0111 11100000  &fp2 r2=%dr2 r3=%dr3
+  SQRTF_S    .....100 01001110 .....111 11100000  &fp2 r2=%fr2 r3=%fr3
+  SUBF_D     ....0100 01110010 ....0111 111....0  &fp3 r1=%dr1 r2=%dr2 r3=%dr3
+  SUBF_S     .....100 01100010 .....111 111.....  &fp3 r1=%fr1 r2=%fr2 r3=%fr3
+  TRNCF_DL   ....0100 01010100 ....0111 11100001  &fp2 r2=%dr2 r3=%dr3
+  TRNCF_DUL  ....0100 01010100 ....0111 11110001  &fp2 r2=%dr2 r3=%dr3
+  TRNCF_DUW  .....100 01010000 ....0111 11110001  &fp2 r2=%dr2 r3=%fr3
+  TRNCF_DW   .....100 01010000 ....0111 11100001  &fp2 r2=%dr2 r3=%fr3
+  TRNCF_SL   ....0100 01000100 .....111 11100001  &fp2 r2=%fr2 r3=%dr3
+  TRNCF_SUL  ....0100 01000100 .....111 11110001  &fp2 r2=%fr2 r3=%dr3
+  TRNCF_SUW  .....100 01000000 .....111 11110001  &fp2 r2=%fr2 r3=%fr3
+  TRNCF_SW   .....100 01000000 .....111 11100001  &fp2 r2=%fr2 r3=%fr3
+  # Any other format 1 encoding: UCPOP or RIE
+  COPRO1    ----- 1 sel:5 ---- 0 ----- 111111 -----
+}
+# FPU end
+# LDSR: the reg2 field is regID, the reg1 field the source
+LDSR        selid:5 00000100000 regid:5 111111 rs:5
+STSR        selid:5 00001000000 rd:5 111111 regid:5
+# Format IX: shifts, CLIP and bit operations by register
+SAR_rr      0000000010100000 ..... 111111 .....        @rr
+SHL_rr      0000000011000000 ..... 111111 .....        @rr
+SHR_rr      0000000010000000 ..... 111111 .....        @rr
+CLIP_B      0000000000001000 ..... 111111 .....        @rr
+CLIP_BU     0000000000001010 ..... 111111 .....        @rr
+CLIP_H      0000000000001100 ..... 111111 .....        @rr
+CLIP_HU     0000000000001110 ..... 111111 .....        @rr
+SET1_r      0000000011100000 ..... 111111 .....        @rr
+NOT1_r      0000000011100010 ..... 111111 .....        @rr
+CLR1_r      0000000011100100 ..... 111111 .....        @rr
+TST1_r      0000000011100110 ..... 111111 .....        @rr
+# Format XI three-register forms
+SAR_r3      ..... 00010100010 ..... 111111 .....       @rrr
+SHL_r3      ..... 00011000010 ..... 111111 .....       @rrr
+SHR_r3      ..... 00010000010 ..... 111111 .....       @rrr
+ROTL_r      ..... 00011000110 ..... 111111 .....       @rrr
+ROTL_i      r3:5 00011000100 r2:5 111111 imm:5
+DIV         ..... 01011000000 ..... 111111 .....       @rrr
+DIVH_r3     ..... 01010000000 ..... 111111 .....       @rrr
+DIVHU       ..... 01010000010 ..... 111111 .....       @rrr
+DIVQ        ..... 01011111100 ..... 111111 .....       @rrr
+DIVQU       ..... 01011111110 ..... 111111 .....       @rrr
+DIVU        ..... 01011000010 ..... 111111 .....       @rrr
+MUL_r       ..... 01000100000 ..... 111111 .....       @rrr
+MULU_r      ..... 01000100010 ..... 111111 .....       @rrr
+MUL_i       r3:5 01001 .... 00 r2:5 111111 .....      imm=%imm9s
+MULU_i      r3:5 01001 .... 10 r2:5 111111 .....      imm=%imm9u
+CAXI        ..... 00011101110 ..... 111111 .....       @rrr
+# MAC, MACU: reg3/reg4 even
+MAC         ....0 011110 ....0 r2:5 111111 r1:5      &mac r3=%mac_r3 r4=%mac_r4
+MACU        ....0 011111 ....0 r2:5 111111 r1:5      &mac r3=%mac_r3 r4=%mac_r4
+# ADF/SBF with cond 1101 (prohibited) are the SATADD/SATSUB
+# three-register encodings
+{
+  SATADD_r3 ..... 01110111010 ..... 111111 .....       @rrr
+  ADF       ..... 011101 .... 0 ..... 111111 .....     @rrrc
+}
+{
+  SATSUB_r3 ..... 01110011010 ..... 111111 .....       @rrr
+  SBF       ..... 011100 .... 0 ..... 111111 .....     @rrrc
+}
+CMOV_r      ..... 011001 .... 0 ..... 111111 .....     @rrrc
+CMOV_i      r3:5 011000 cond:4 0 r2:5 111111 imm:s5
+# BINS: msb/lsb ranges select the sub-opcode
+BINS        .... . 0001001 ... 0 r2:5 111111 r1:5     &bins msb=%msb_hi lsb=%lsb_hi
+BINS        .... . 0001011 ... 0 r2:5 111111 r1:5     &bins msb=%msb_hi lsb=%lsb_lo
+BINS        msb:4 . 0001101 ... 0 r2:5 111111 r1:5    &bins lsb=%lsb_lo
+# Format IX/XII with reg1 = r0
+BSH         ..... 01101000010 ..... 111111 00000       @r23
+BSW         ..... 01101000000 ..... 111111 00000       @r23
+HSH         ..... 01101000110 ..... 111111 00000       @r23
+HSW         ..... 01101000100 ..... 111111 00000       @r23
+SCH0L       ..... 01101100100 ..... 111111 00000       @r23
+SCH0R       ..... 01101100000 ..... 111111 00000       @r23
+SCH1L       ..... 01101100110 ..... 111111 00000       @r23
+SCH1R       ..... 01101100010 ..... 111111 00000       @r23
+# [reg1]+ / [reg1]- forms
+LD_B_INC    ..... 01101110000 00010 111111 .....       @memi
+LD_B_DEC    ..... 01101110000 00100 111111 .....       @memi
+LD_BU_INC   ..... 01101110000 00011 111111 .....       @memi
+LD_BU_DEC   ..... 01101110000 00101 111111 .....       @memi
+LD_H_INC    ..... 01101110100 00010 111111 .....       @memi
+LD_H_DEC    ..... 01101110100 00100 111111 .....       @memi
+LD_HU_INC   ..... 01101110100 00011 111111 .....       @memi
+LD_HU_DEC   ..... 01101110100 00101 111111 .....       @memi
+LD_W_INC    ..... 01101111000 00010 111111 .....       @memi
+LD_W_DEC    ..... 01101111000 00100 111111 .....       @memi
+ST_B_INC    ..... 01101110010 00010 111111 .....       @memi
+ST_B_DEC    ..... 01101110010 00100 111111 .....       @memi
+ST_H_INC    ..... 01101110110 00010 111111 .....       @memi
+ST_H_DEC    ..... 01101110110 00100 111111 .....       @memi
+ST_W_INC    ..... 01101111010 00010 111111 .....       @memi
+ST_W_DEC    ..... 01101111010 00100 111111 .....       @memi
+# Link load / conditional store
+LDL_BU      ..... 01101110000 00001 111111 .....       @memi
+LDL_HU      ..... 01101110100 00001 111111 .....       @memi
+LDL_W       ..... 01101111000 00000 111111 .....       @memi
+STC_B       ..... 01101110010 00000 111111 .....       @memi
+STC_H       ..... 01101110110 00000 111111 .....       @memi
+STC_W       ..... 01101111010 00000 111111 .....       @memi
