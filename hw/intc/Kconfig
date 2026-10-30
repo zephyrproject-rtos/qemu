@@ -68,6 +68,9 @@ config SH_INTC
 config RX_ICU
     bool
 
+config RH850_INTC
+    bool
+
 config LOONGSON_LIOINTC
     bool
 
