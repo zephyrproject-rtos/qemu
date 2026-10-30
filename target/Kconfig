@@ -9,6 +9,7 @@ source microblaze/Kconfig
 source mips/Kconfig
 source or1k/Kconfig
 source ppc/Kconfig
+source rh850/Kconfig
 source riscv/Kconfig
 source rx/Kconfig
 source s390x/Kconfig
