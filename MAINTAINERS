@@ -391,6 +391,15 @@ F: target/riscv/XVentanaCondOps.decode
 F: target/riscv/insn_trans/trans_xventanacondops.c.inc
 F: disas/riscv-xventana*
 
+RENESAS RH850 CPUs
+M: Parthiban Nallathambi <parthiban@linumiz.com>
+M: Saravanan Sekar <saravanan@linumiz.com>
+S: Maintained
+F: target/rh850/
+F: configs/targets/rh850-softmmu.mak
+F: configs/devices/rh850-softmmu/
+F: tests/tcg/rh850/
+
 RENESAS RX CPUs
 R: Yoshinori Sato <yoshinori.sato@nifty.com>
 S: Orphan
