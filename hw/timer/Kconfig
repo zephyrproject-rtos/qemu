@@ -54,6 +54,9 @@ config RENESAS_TMR
 config RENESAS_CMT
     bool
 
+config RENESAS_OSTM
+    bool
+
 config SSE_COUNTER
     bool
 
