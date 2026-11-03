@@ -391,6 +391,15 @@ F: target/riscv/XVentanaCondOps.decode
 F: target/riscv/insn_trans/trans_xventanacondops.c.inc
 F: disas/riscv-xventana*
 
+RENESAS RH850 CPUs
+M: Parthiban Nallathambi <parthiban@linumiz.com>
+M: Saravanan Sekar <saravanan@linumiz.com>
+S: Maintained
+F: target/rh850/
+F: configs/targets/rh850-softmmu.mak
+F: configs/devices/rh850-softmmu/
+F: tests/tcg/rh850/
+
 RENESAS RX CPUs
 R: Yoshinori Sato <yoshinori.sato@nifty.com>
 S: Orphan
@@ -1745,6 +1754,23 @@ F: hw/ppc/vof*
 F: include/hw/ppc/vof*
 F: pc-bios/vof/*
 F: pc-bios/vof*
+
+RH850 Machines
+--------------
+rh850-u2c
+M: Parthiban Nallathambi <parthiban@linumiz.com>
+M: Saravanan Sekar <saravanan@linumiz.com>
+S: Maintained
+F: docs/system/target-rh850.rst
+F: hw/rh850/
+F: hw/intc/rh850_intc.c
+F: hw/intc/rh850_u2c8_level.c.inc
+F: hw/timer/renesas_ostm.c
+F: hw/char/renesas_rlin3.c
+F: include/hw/rh850/
+F: include/hw/intc/rh850_intc.h
+F: include/hw/timer/renesas_ostm.h
+F: include/hw/char/renesas_rlin3.h
 
 RISC-V Machines
 ---------------

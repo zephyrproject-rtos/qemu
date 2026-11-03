@@ -23,6 +23,7 @@ Contents:
    target-mips
    target-or1k
    target-ppc
+   target-rh850
    target-riscv
    target-rx
    target-s390x

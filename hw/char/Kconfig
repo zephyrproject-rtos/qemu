@@ -72,6 +72,9 @@ config SH_SCI
 config RENESAS_SCI
     bool
 
+config RENESAS_RLIN3
+    bool
+
 config AVR_USART
     bool
 

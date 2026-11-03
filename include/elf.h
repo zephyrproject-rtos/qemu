@@ -174,6 +174,7 @@ typedef struct mips_elf_abiflags_v0 {
 
 #define EM_AVR              83  /* AVR 8-bit microcontroller */
 
+#define EM_V800             36  /* NEC V800 series */
 #define EM_V850             87  /* NEC v850 */
 
 #define EM_H8_300H          47  /* Hitachi H8/300H */
